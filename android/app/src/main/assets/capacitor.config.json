@@ -1,0 +1,6 @@
+{
+	"appId": "com.recipe.walexy.app",
+	"appName": "recpe-app",
+	"webDir": "www",
+	"bundledWebRuntime": false
+}
