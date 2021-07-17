@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MenuController } from '@ionic/angular';
 import { SegmentChangeEventDetail } from '@ionic/core';
 import { Subscription } from 'rxjs';
+import { take } from 'rxjs/operators';
 import { AuthService } from 'src/app/auth/auth.service';
 import { Place } from '../place.model';
 import { PlacesService } from '../places.service';
@@ -44,21 +45,23 @@ export class DiscoverPage implements OnInit, OnDestroy {
   }
   onFilterBookings(event) {
     console.log(event.detail);
-    if (event.detail.value === 'bookable') {
-      console.log(this.authService);
-      console.log(this.loadedPlaces);
-      console.log(this.relevantPlaces);
+    this.authService.userId.pipe(take(1)).subscribe((userId) => {
+      if (event.detail.value === 'bookable') {
+        console.log(this.authService);
+        console.log(this.loadedPlaces);
+        console.log(this.relevantPlaces);
 
-      this.relevantPlaces = this.loadedPlaces.filter(
-        (pl) => pl.userId !== this.authService.userId
-      );
-      this.selected = Math.floor(Math.random() * this.relevantPlaces.length);
-      console.log(this.relevantPlaces);
-    } else {
-      this.relevantPlaces = this.loadedPlaces;
-      this.selected = Math.floor(Math.random() * this.relevantPlaces.length);
-      console.log(this.relevantPlaces);
-    }
+        this.relevantPlaces = this.loadedPlaces.filter(
+          (pl) => pl.userId !== userId
+        );
+        this.selected = Math.floor(Math.random() * this.relevantPlaces.length);
+        console.log(this.relevantPlaces);
+      } else {
+        this.relevantPlaces = this.loadedPlaces;
+        this.selected = Math.floor(Math.random() * this.relevantPlaces.length);
+        console.log(this.relevantPlaces);
+      }
+    });
   }
   ngOnDestroy() {
     if (this.placesSub) {

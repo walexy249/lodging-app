@@ -8,6 +8,7 @@ import {
   NavController,
 } from '@ionic/angular';
 import { Subscription } from 'rxjs';
+import { switchMap, take } from 'rxjs/operators';
 import { AuthService } from 'src/app/auth/auth.service';
 import { BookingsService } from 'src/app/bookings/bookings.service';
 import { CreateBookingComponent } from 'src/app/bookings/create-booking/create-booking.component';
@@ -40,30 +41,42 @@ export class PlaceDetailPage implements OnInit, OnDestroy {
   ngOnInit() {
     this.route.paramMap.subscribe((param: ParamMap) => {
       const id = param.get('placeId');
+      let fetchedUserId: string;
       this.isLoading = true;
-      this.placeSub = this.placesService.getPlace(id).subscribe(
-        (place) => {
-          this.place = place;
-          // console.log(this.place);
-          this.isBookable = this.place.userId !== this.authService.userId;
-          this.isLoading = false;
-        },
-        async (error) => {
-          const ctrl = await this.alertctrl.create({
-            header: 'An Error Occured',
-            message: 'Place could not be found.Please try again later',
-            buttons: [
-              {
-                text: 'Okay',
-                handler: () => {
-                  this.router.navigate(['/places/tabs/discover']);
+      this.authService.userId
+        .pipe(
+          take(1),
+          switchMap((userId) => {
+            if (!userId) {
+              throw new Error('Could not find userId');
+            }
+            fetchedUserId = userId;
+            return this.placesService.getPlace(id);
+          })
+        )
+        .subscribe(
+          (place) => {
+            this.place = place;
+            // console.log(this.place);
+            this.isBookable = this.place.userId !== fetchedUserId;
+            this.isLoading = false;
+          },
+          async (error) => {
+            const ctrl = await this.alertctrl.create({
+              header: 'An Error Occured',
+              message: 'Place could not be found.Please try again later',
+              buttons: [
+                {
+                  text: 'Okay',
+                  handler: () => {
+                    this.router.navigate(['/places/tabs/discover']);
+                  },
                 },
-              },
-            ],
-          });
-          ctrl.present();
-        }
-      );
+              ],
+            });
+            ctrl.present();
+          }
+        );
     });
   }
   onBook() {
