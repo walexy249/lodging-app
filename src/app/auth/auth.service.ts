@@ -58,6 +58,17 @@ export class AuthService implements OnDestroy {
     );
   }
 
+  get token() {
+    return this._user.asObservable().pipe(
+      map((user) => {
+        if (!user) {
+          return null;
+        }
+        return user.token;
+      })
+    );
+  }
+
   autoLogin() {
     return from(Storage.get({ key: 'authData' })).pipe(
       map((storedData) => {

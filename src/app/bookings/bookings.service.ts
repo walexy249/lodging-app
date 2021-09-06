@@ -45,16 +45,22 @@ export class BookingsService {
   ) {
     let generatedId;
     let newBooking;
+    let fetchedUserId;
     return this.authService.userId.pipe(
       take(1),
       switchMap((userId) => {
-        if (!userId) {
+        fetchedUserId = userId;
+        return this.authService.token;
+      }),
+      take(1),
+      switchMap((token) => {
+        if (!fetchedUserId) {
           throw new Error('Could not bfind userID');
         }
         newBooking = new Booking(
           Math.random().toString(),
           placeId,
-          userId,
+          fetchedUserId,
           placeTitle,
           placeImage,
           firstName,
@@ -64,7 +70,7 @@ export class BookingsService {
           dateTo
         );
         return this.http.post<{ name: string }>(
-          'https://ionic-lodging-app-default-rtdb.firebaseio.com/bookings.json',
+          `https://ionic-lodging-app-default-rtdb.firebaseio.com/bookings.json?auth=${token}`,
           { ...newBooking, id: null }
         );
       }),
@@ -81,11 +87,17 @@ export class BookingsService {
   }
 
   fetchBookings() {
-    return this.authService.userId.pipe(
+    let fetchedToken;
+    return this.authService.token.pipe(
+      take(1),
+      switchMap((token) => {
+        fetchedToken = token;
+        return this.authService.userId;
+      }),
       take(1),
       switchMap((userId) =>
         this.http.get<{ [key: string]: bookingData }>(
-          `https://ionic-lodging-app-default-rtdb.firebaseio.com/bookings.json?orderBy="userId"&equalTo="${userId}"`
+          `https://ionic-lodging-app-default-rtdb.firebaseio.com/bookings.json?orderBy="userId"&equalTo="${userId}"&auth=${fetchedToken}"`
         )
       ),
       map((bookingData) => {
@@ -117,16 +129,18 @@ export class BookingsService {
   }
 
   deletebooking(bookingId: string) {
-    return this.http
-      .delete(
-        `https://ionic-lodging-app-default-rtdb.firebaseio.com/bookings/${bookingId}.json`
-      )
-      .pipe(
-        switchMap(() => this.bookings),
-        take(1),
-        tap((bookings) => {
-          this._bookings.next(bookings.filter((el) => el.id !== bookingId));
-        })
-      );
+    return this.authService.token.pipe(
+      take(1),
+      switchMap((token) =>
+        this.http.delete(
+          `https://ionic-lodging-app-default-rtdb.firebaseio.com/bookings/${bookingId}.json?auth=${token}`
+        )
+      ),
+      switchMap(() => this.bookings),
+      take(1),
+      tap((bookings) => {
+        this._bookings.next(bookings.filter((el) => el.id !== bookingId));
+      })
+    );
   }
 }

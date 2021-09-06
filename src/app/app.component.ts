@@ -19,11 +19,12 @@ export class AppComponent implements OnInit, OnDestroy {
         this.router.navigateByUrl('/auth');
       }
       this.previousAuthstate = isAuth;
+      console.log('previosAuthstate', this.previousAuthstate);
     });
   }
   onLogout() {
     this.authService.logout();
-    this.router.navigateByUrl('/auth');
+    // this.router.navigateByUrl('/auth');
   }
 
   ngOnDestroy() {

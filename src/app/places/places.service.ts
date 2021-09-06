@@ -32,57 +32,61 @@ export class PlacesService {
     return this._places.asObservable();
   }
   fetchPlaces() {
-    return this.http
-      .get(
-        'https://ionic-lodging-app-default-rtdb.firebaseio.com/offered-places.json'
-      )
-      .pipe(
-        map((resData) => {
-          const arr = [];
-          for (const keys in resData) {
-            if (resData.hasOwnProperty(keys)) {
-              arr.push(
-                new Place(
-                  keys,
-                  resData[keys].title,
-                  resData[keys].description,
-                  resData[keys].imageUrl,
-                  resData[keys].price,
-                  new Date(resData[keys].availableFrom),
-                  new Date(resData[keys].availabeTo),
-                  resData[keys].userId
-                )
-              );
-            }
+    return this.authService.token.pipe(
+      take(1),
+      switchMap((token) =>
+        this.http.get(
+          `https://ionic-lodging-app-default-rtdb.firebaseio.com/offered-places.json?auth=${token}`
+        )
+      ),
+      map((resData) => {
+        const arr = [];
+        for (const keys in resData) {
+          if (resData.hasOwnProperty(keys)) {
+            arr.push(
+              new Place(
+                keys,
+                resData[keys].title,
+                resData[keys].description,
+                resData[keys].imageUrl,
+                resData[keys].price,
+                new Date(resData[keys].availableFrom),
+                new Date(resData[keys].availabeTo),
+                resData[keys].userId
+              )
+            );
           }
-          return arr;
-        }),
-        tap((data) => {
-          console.log(data);
-          this._places.next(data);
-        })
-      );
+        }
+        return arr;
+      }),
+      tap((data) => {
+        console.log(data);
+        this._places.next(data);
+      })
+    );
   }
   getPlace(id: string) {
-    return this.http
-      .get<PlaceData>(
-        `https://ionic-lodging-app-default-rtdb.firebaseio.com/offered-places/${id}.json`
-      )
-      .pipe(
-        map(
-          (resData) =>
-            new Place(
-              id,
-              resData.title,
-              resData.description,
-              resData.imageUrl,
-              resData.price,
-              new Date(resData.availableFrom),
-              new Date(resData.availabeTo),
-              resData.userId
-            )
+    return this.authService.token.pipe(
+      take(1),
+      switchMap((token) =>
+        this.http.get<PlaceData>(
+          `https://ionic-lodging-app-default-rtdb.firebaseio.com/offered-places/${id}.json?auth=${token}`
         )
-      );
+      ),
+      map(
+        (resData) =>
+          new Place(
+            id,
+            resData.title,
+            resData.description,
+            resData.imageUrl,
+            resData.price,
+            new Date(resData.availableFrom),
+            new Date(resData.availabeTo),
+            resData.userId
+          )
+      )
+    );
   }
   addPlace(
     title: string,
@@ -93,10 +97,16 @@ export class PlacesService {
   ) {
     let generatedId: string;
     let newPlace: Place;
+    let fetchedUSerId;
     return this.authService.userId.pipe(
       take(1),
       switchMap((userId) => {
-        if (!userId) {
+        fetchedUSerId = userId;
+        return this.authService.token;
+      }),
+      take(1),
+      switchMap((token) => {
+        if (!fetchedUSerId) {
           throw new Error('could not find userId');
         }
         newPlace = new Place(
@@ -107,10 +117,10 @@ export class PlacesService {
           price,
           date_from,
           date_to,
-          userId
+          fetchedUSerId
         );
         return this.http.post<{ name: string }>(
-          'https://ionic-lodging-app-default-rtdb.firebaseio.com/offered-places.json',
+          `https://ionic-lodging-app-default-rtdb.firebaseio.com/offered-places.json?auth=${token}`,
           { ...newPlace, id: null }
         );
       }),
@@ -127,7 +137,13 @@ export class PlacesService {
   }
   updatePlace(id, title: string, description: string) {
     let updatedPlace;
-    return this.places.pipe(
+    let fetchedToken;
+    return this.authService.token.pipe(
+      take(1),
+      switchMap((token) => {
+        fetchedToken = token;
+        return this.places;
+      }),
       take(1),
       switchMap((places) => {
         if (!places || places.length <= 0) {
@@ -151,7 +167,7 @@ export class PlacesService {
           oldPlace.userId
         );
         return this.http.put(
-          `https://ionic-lodging-app-default-rtdb.firebaseio.com/offered-places/${id}.json`,
+          `https://ionic-lodging-app-default-rtdb.firebaseio.com/offered-places/${id}.json?auth=${fetchedToken}`,
           { ...updatedPlace[index], id: null }
         );
       }),
