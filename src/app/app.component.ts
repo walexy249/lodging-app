@@ -21,6 +21,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.previousAuthstate = isAuth;
       console.log('previosAuthstate', this.previousAuthstate);
     });
+    console.log('APP Component');
   }
   onLogout() {
     this.authService.logout();
